@@ -62,18 +62,16 @@ void setup()
   }; // end if
 
   // Set frequency. AfcPullinRange set to 50 Khz (unused, we are not receiving)
-  //  rf22.setFrequency(433.9000, 0.00);
-  rf22.setFrequency(433.8700, 0.050); // subtract 30 Khz for crystal correction
+  rf22.setFrequency(433.9000, 0.050); // subtract 30 Khz for crystal correction
                                           // this correction-value will differ per device.
                                           // to be determined experimental
 
+  //rf22.setModemConfig(RH_RF22::FSK_Rb_512Fd4_5 );  // (POCSAG512)
+  rf22.setModemConfig(RH_RF22::FSK_Rb_1200Fd4_5 );  // (POCSAG1200)
+  //rf22.setModemConfig(RH_RF22::FSK_Rb_2400Fd4_5 );  // (POCSAG2400)
 
-  // set to 512 bps FSK, 4.5 Khz deviation (POCSAG 512)
-  rf22.setModemConfig(RH_RF22::FSK_Rb_512Fd4_5 ); 
-
-
-  // 6 mW TX power (EU ISM legislation)
-  rf22.setTxPower(RH_RF22_TXPOW_8DBM);
+  //rf22.setTxPower(RH_RF22_TXPOW_8DBM);  // 6 mW TX power (EU ISM legislation)
+  rf22.setTxPower(RH_RF22_TXPOW_20DBM);  // 100mW TX power
   
 }
 
@@ -499,8 +497,8 @@ if (state == -2) {
   newfreq=((float)freq1)+((float)freq2)/10000.0F; // f1 = MHz, F2 = 100 Hz
   
 
-  // ISM band: 434.050 to 434.800 and 863 to 870
-  if ( ((newfreq >= 433.050F) && (newfreq <= 434.8F)) || 
+  // ISM band: 434.050 to 466.800 and 863 to 870
+  if ( ((newfreq >= 433.050F) && (newfreq <= 466.8F)) ||
       ((newfreq >= 863.0) && (newfreq < 870.0F)) ) {
     Serial.print("switching to new frequency: ");
     Serial.println(newfreq);
@@ -510,7 +508,7 @@ if (state == -2) {
     rf22.setFrequency(freq, 0.05); // set frequency, AfcPullinRange not used (receive-only)
     
   } else {
-    Serial.print("Error: invalid frequency (should be 433.050-434.800 or 853-8670 Mhz) ");
+    Serial.print("Error: invalid frequency (should be 433.050-466.800 or 853-8670 Mhz) ");
     Serial.println(newfreq);
   }; // end if
 }; // end function F (frequency)
