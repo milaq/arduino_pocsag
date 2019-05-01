@@ -12,6 +12,7 @@
 
 
 // (c) 2014 Kristoff Bonne (ON1ARF)
+// (c) 2019 Micha LaQua <micha.laqua@gmail.com>
 
 /*
  *  This program is free software; you can redistribute it and/or
@@ -29,11 +30,6 @@
  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-
-// Version 0.1.0 (20140330) Initial release
-// Version 0.1.1 (20140418) pocsag message creation now done on arduino
-// Version 0.1.2 (20140516) using "Pocsag" class, moved to ReadHead library, removed callsign and CW beacon
-
 
 #include <SPI.h>
 #include <RH_RF22.h>
@@ -72,7 +68,14 @@ void setup()
 
   //rf22.setTxPower(RH_RF22_TXPOW_8DBM);  // 6 mW TX power (EU ISM legislation)
   rf22.setTxPower(RH_RF22_TXPOW_20DBM);  // 100mW TX power
-  
+
+  Serial.println("");
+  Serial.println("POCSAG text-message tool v0.2 (non-ham):");
+  Serial.println("========================================");
+  Serial.println("P <address> <source> <repeat> <message>");
+  Serial.println("F <freqmhz> <freq100Hz>");
+  Serial.println("D <datarate> (0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400)");
+  Serial.println("");
 }
 
 void loop() {
@@ -96,17 +99,7 @@ int freq2; // freq. 100 Hz part (4 digits)
 
 int datarate;
 
-// read input:
-// format: "P <address> <source> <repeat> <message>"
-// format: "F <freqmhz> <freq100Hz>"
-
-Serial.println("POCSAG text-message tool v0.1 (non-ham):");
-Serial.println("https://github.com/on1arf/pocsag");
-Serial.println("");
-Serial.println("Format:");
-Serial.println("P <address> <source> <repeat> <message>");
-Serial.println("F <freqmhz> <freq100Hz>");
-Serial.println("D <datarate> (0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400)");
+Serial.print("> ");
 
 // init var
 state=0;
@@ -128,9 +121,10 @@ char c;
   c=Serial.read();
 
 
-  // break out on ESC
-  if (c == 0x1b) {
+  // break out on ESC and CTRL-C
+  if ((c == 0x1b) || (c == 0x03)) {
     state=-999;
+    Serial.println("");
     break;
   }; // end if
 
