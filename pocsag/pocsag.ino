@@ -66,9 +66,9 @@ void setup()
                                           // this correction-value will differ per device.
                                           // to be determined experimental
 
-  //rf22.setModemConfig(RH_RF22::FSK_Rb_512Fd4_5 );  // (POCSAG512)
-  rf22.setModemConfig(RH_RF22::FSK_Rb_1200Fd4_5 );  // (POCSAG1200)
-  //rf22.setModemConfig(RH_RF22::FSK_Rb_2400Fd4_5 );  // (POCSAG2400)
+  rf22.setModemConfig(RH_RF22::FSK_Rb_512Fd4_5);  // (POCSAG512)
+  //rf22.setModemConfig(RH_RF22::FSK_Rb_1200Fd4_5);  // (POCSAG1200)
+  //rf22.setModemConfig(RH_RF22::FSK_Rb_2400Fd4_5);  // (POCSAG2400)
 
   //rf22.setTxPower(RH_RF22_TXPOW_8DBM);  // 6 mW TX power (EU ISM legislation)
   rf22.setTxPower(RH_RF22_TXPOW_20DBM);  // 100mW TX power
@@ -94,6 +94,8 @@ int freqsize;
 int freq1; // freq MHZ part (3 digits)
 int freq2; // freq. 100 Hz part (4 digits)
 
+int datarate;
+
 // read input:
 // format: "P <address> <source> <repeat> <message>"
 // format: "F <freqmhz> <freq100Hz>"
@@ -104,6 +106,7 @@ Serial.println("");
 Serial.println("Format:");
 Serial.println("P <address> <source> <repeat> <message>");
 Serial.println("F <freqmhz> <freq100Hz>");
+Serial.println("D <datarate> (0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400)");
 
 // init var
 state=0;
@@ -113,6 +116,8 @@ msgsize=0;
 
 freqsize=0;
 freq1=0; freq2=0;
+
+datarate=-1;
 
 while (state >= 0) {
 char c;
@@ -135,6 +140,7 @@ char c;
     // state 0: wait for command
     // P = PAGE
     // F = FREQUENCY
+    // D = DATARATE ID
         
     if ((c == 'p') || (c == 'P')) {
       // ok, got our "p" -> go to state 1
@@ -145,6 +151,12 @@ char c;
     } else if ((c == 'f') || (c == 'F')) {
       // ok, got our "f" -> go to state 1
       state=10;
+
+      // echo back char
+      Serial.write(c);
+    } else if ((c == 'd') || (c == 'D')) {
+      // ok, got our "d" -> go to state 14
+      state=20;
       
       // echo back char
       Serial.write(c);
@@ -443,6 +455,44 @@ char c;
 
   }; // end state 12;
 
+
+  // PART 3: data rate
+
+  // state 20: space (" ") or data rate id (0,1,2)
+  if (state == 20) {
+    if (c == ' ') {
+      state=21;
+      Serial.write(c);
+      continue;
+    } else if ((c >= '0') && (c <= '2')) {
+      datarate = c;
+      state=21;
+      Serial.write(c);
+    } else {
+      Serial.write(bell);
+      continue;
+    }
+  }
+
+  // state 21: data rate id
+  if (state == 21) {
+    if ((datarate == -1) && (c >= '0') && (c <= '2')) {
+      datarate = c;
+      Serial.write(c);
+    } else if ((c == 0x0a) || (c == 0x0d)) {
+      if (datarate >= 0) {
+        state = -3;
+        Serial.println("");
+        break;
+      } else {
+        Serial.write(bell);
+        continue;
+      };
+    } else {
+      Serial.write(bell);
+    }
+  }
+
 }; // end while
 
 
@@ -513,6 +563,20 @@ if (state == -2) {
   }; // end if
 }; // end function F (frequency)
 
+// function "D": change data rate
+if (state == -3) {
+  Serial.print("switching to new data rate: ");
+  if (datarate == '0') {
+    Serial.println("POCSAG512");
+    rf22.setModemConfig(RH_RF22::FSK_Rb_512Fd4_5);  // (POCSAG512)
+  } else if (datarate == '1') {
+    Serial.println("POCSAG1200");
+    rf22.setModemConfig(RH_RF22::FSK_Rb_1200Fd4_5);  // (POCSAG1200)
+  } else if (datarate == '2') {
+    Serial.println("POCSAG2400");
+    rf22.setModemConfig(RH_RF22::FSK_Rb_2400Fd4_5);  // (POCSAG2400)
+  }
+} // end function D (data rate)
 
 
 }; // end main application
