@@ -521,8 +521,8 @@ if (state == -1) {
     Serial.print("Error in createpocsag! Error: ");
     Serial.println(pocsag.GetError());
 
-    // sleep 10 seconds
-    delay(10000);
+    // sleep 5 seconds
+    delay(5000);
   } else {
 
    
@@ -533,7 +533,7 @@ if (state == -1) {
       rf22.send((uint8_t *)pocsag.GetMsgPointer(), pocsag.GetSize());
       rf22.waitPacketSent();
       
-      delay(3000);
+      delay(200);
     }; // end for
 
   }; // end else - if; 
