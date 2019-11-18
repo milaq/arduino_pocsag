@@ -61,20 +61,16 @@ void setup()
   rf22.setFrequency(433.9000, 0.050); // subtract 30 Khz for crystal correction
                                           // this correction-value will differ per device.
                                           // to be determined experimental
-
-  rf22.setModemConfig(RH_RF22::FSK_Rb_512Fd4_5);  // (POCSAG512)
-  //rf22.setModemConfig(RH_RF22::FSK_Rb_1200Fd4_5);  // (POCSAG1200)
-  //rf22.setModemConfig(RH_RF22::FSK_Rb_2400Fd4_5);  // (POCSAG2400)
-
-  //rf22.setTxPower(RH_RF22_TXPOW_8DBM);  // 6 mW TX power (EU ISM legislation)
-  rf22.setTxPower(RH_RF22_TXPOW_20DBM);  // 100mW TX power
+  rf22.setModemConfig(RH_RF22::FSK_Rb_1200Fd4_5);
+  rf22.setTxPower(RH_RF22_TXPOW_8DBM);  // 6 mW TX power (EU ISM legislation)
 
   Serial.println("");
   Serial.println("POCSAG text-message tool v0.2 (non-ham):");
   Serial.println("========================================");
   Serial.println("P <address> <source> <repeat> <message>");
-  Serial.println("F <freq khz>");
-  Serial.println("D <datarate> (0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400)");
+  Serial.println("F <freq khz> (default: 433900)");
+  Serial.println("D <datarate> (0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400) (default: POCSAG1200)");
+  Serial.println("X <txpower> (1-8) (default: 4)");
   Serial.println("");
 }
 
@@ -92,12 +88,11 @@ int addresssource;
 int repeat;
 char textmsg[42]; // to store text message;
 int msgsize;
-
 int freqsize;
 int freq1; // freq MHZ part (3 digits)
 int freq2; // freq KHZ part (3 digits)
-
 int datarate;
+int txpower;
 
 Serial.print("> ");
 
@@ -106,11 +101,10 @@ state=0;
 address=0;
 addresssource=0;
 msgsize=0;
-
 freqsize=0;
 freq1=0; freq2=0;
-
 datarate=-1;
+txpower=-1;
 
 while (state >= 0) {
 char c;
@@ -135,6 +129,7 @@ char c;
     // P = PAGE
     // F = FREQUENCY
     // D = DATARATE ID
+    // X = TX POWER
         
     if ((c == 'p') || (c == 'P')) {
       // ok, got our "p" -> go to state 1
@@ -143,15 +138,21 @@ char c;
       // echo back char
       Serial.write(c);
     } else if ((c == 'f') || (c == 'F')) {
-      // ok, got our "f" -> go to state 1
+      // ok, got our "f" -> go to state 10
       state=10;
 
       // echo back char
       Serial.write(c);
     } else if ((c == 'd') || (c == 'D')) {
-      // ok, got our "d" -> go to state 14
+      // ok, got our "d" -> go to state 20
       state=20;
       
+      // echo back char
+      Serial.write(c);
+    } else if ((c == 'x') || (c == 'X')) {
+      // ok, got our "d" -> go to state 30
+      state=30;
+
       // echo back char
       Serial.write(c);
     } else {
@@ -469,6 +470,44 @@ char c;
     }
   }
 
+
+  // PART 4: tx power
+
+  // state 30: space (" ") or tx power num
+  if (state == 30) {
+    if (c == ' ') {
+      state = 31;
+      Serial.write(c);
+      continue;
+    } else if ((c >= '1') && (c <= '8')) {
+      txpower = c;
+      state = 31;
+      Serial.write(c);
+    } else {
+      Serial.write(bell);
+      continue;
+    }
+  }
+
+  // state 31: tx power num
+  if (state == 31) {
+    if ((txpower == -1) && (c >= '1') && (c <= '8')) {
+      txpower = c;
+      Serial.write(c);
+    } else if ((c == 0x0a) || (c == 0x0d)) {
+      if (txpower >= 0) {
+        state = -4;
+        Serial.println("");
+        break;
+      } else {
+        Serial.write(bell);
+        continue;
+      };
+    } else {
+      Serial.write(bell);
+    }
+  }
+
 }; // end while
 
 
@@ -551,6 +590,35 @@ if (state == -3) {
   }
 } // end function D (data rate)
 
+// function "X": change tx power
+if (state == -4) {
+  Serial.print("setting tx power to: ");
+  if (txpower == '1') {
+    Serial.println("1 (1 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_1DBM);
+  } else if (txpower == '2') {
+    Serial.println("2 (2 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_2DBM);
+  } else if (txpower == '3') {
+    Serial.println("3 (5 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_5DBM);
+  } else if (txpower == '4') {
+    Serial.println("4 (8 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_8DBM);
+  } else if (txpower == '5') {
+    Serial.println("5 (11 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_11DBM);
+  } else if (txpower == '6') {
+    Serial.println("6 (14 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_14DBM);
+  } else if (txpower == '7') {
+    Serial.println("7 (17 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_17DBM);
+  } else if (txpower == '8') {
+    Serial.println("8 (20 dBm)");
+    rf22.setTxPower(RH_RF22_TXPOW_20DBM);
+  }
+} // end function X (tx power)
 
 }; // end main application
 
