@@ -41,11 +41,7 @@
 // Singleton instance of the radio
 RH_RF22 rf22;
 
-
 Pocsag pocsag;
-
-// frequency
-float freq;
 
 void setup() 
 {
@@ -67,10 +63,10 @@ void setup()
   Serial.println("");
   Serial.println("POCSAG text-message tool v0.2 (non-ham):");
   Serial.println("========================================");
-  Serial.println("P <address> <source> <repeat> <message>");
-  Serial.println("F <freq khz> (default: 433900)");
-  Serial.println("D <datarate> (0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400) (default: POCSAG1200)");
-  Serial.println("X <txpower> (1-8) (default: 4)");
+  Serial.println("P <address> <sourceid> <repeat> <message>");
+  Serial.println("F <freqkhz>    [433050-466800 and 863000-870000]  (default: 433900)");
+  Serial.println("D <datarate>    [0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400]  (default: POCSAG1200)");
+  Serial.println("X <txpower>    [1-8]  (default: 4)");
   Serial.println("");
 }
 
@@ -84,7 +80,7 @@ char bell=0x07;
 
 // data
 long int address;
-int addresssource;
+int sourceid;
 int repeat;
 char textmsg[42]; // to store text message;
 int msgsize;
@@ -99,7 +95,7 @@ Serial.print("> ");
 // init var
 state=0;
 address=0;
-addresssource=0;
+sourceid=0;
 msgsize=0;
 freqsize=0;
 freq1=0; freq2=0;
@@ -207,7 +203,7 @@ char c;
       }; // end else - if
 
     } else if (c == ' ') {
-      // received space, go to next field (address source)
+      // received space, go to next field (source id)
       Serial.write(c);
       state=3;
     } else {
@@ -219,10 +215,10 @@ char c;
     continue;
   }; // end state 2
 
-  // state 3: address source: one single digit from 0 to 3
+  // state 3: source id: one single digit from 0 to 3
   if (state == 3) {
     if ((c >= '0') && (c <= '3')) {
-      addresssource= c - '0';
+      sourceid= c - '0';
       Serial.write(c);
 
       state=4;
@@ -516,8 +512,8 @@ if (state == -1) {
   Serial.print("address: ");
   Serial.println(address);
 
-  Serial.print("addresssource: ");
-  Serial.println(addresssource);
+  Serial.print("source id: ");
+  Serial.println(sourceid);
 
   Serial.print("repeat: ");
   Serial.println(repeat);
@@ -529,7 +525,7 @@ if (state == -1) {
   // batch2 option = 0 (truncate message)
   // invert option1 (invert)
 
-  rc=pocsag.CreatePocsag(address,addresssource,textmsg,0,1);
+  rc=pocsag.CreatePocsag(address,sourceid,textmsg,0,1);
 
 
   if (!rc) {
@@ -565,9 +561,8 @@ if (state == -2) {
       ((newfreq >= 863.0) && (newfreq < 870.0F)) ) {
     Serial.print("switching to new frequency: ");
     Serial.println(newfreq);
-    
-    freq=newfreq;
-    rf22.setFrequency(freq, 0.05); // set frequency, AfcPullinRange not used (receive-only)
+
+    rf22.setFrequency(newfreq, 0.05); // set frequency, AfcPullinRange not used (receive-only)
   } else {
     Serial.print("invalid frequency: ");
     Serial.println(newfreq);
