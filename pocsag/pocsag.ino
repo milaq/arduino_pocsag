@@ -73,7 +73,7 @@ void setup()
   Serial.println("POCSAG text-message tool v0.2 (non-ham):");
   Serial.println("========================================");
   Serial.println("P <address> <source> <repeat> <message>");
-  Serial.println("F <freqmhz> <freq100Hz>");
+  Serial.println("F <freq khz>");
   Serial.println("D <datarate> (0 - POCSAG512, 1 - POCSAG1200, 2 - POCSAG2400)");
   Serial.println("");
 }
@@ -95,7 +95,7 @@ int msgsize;
 
 int freqsize;
 int freq1; // freq MHZ part (3 digits)
-int freq2; // freq. 100 Hz part (4 digits)
+int freq2; // freq KHZ part (3 digits)
 
 int datarate;
 
@@ -368,9 +368,10 @@ char c;
         freqsize++;
         Serial.write(c);
                
-        // go to state 12 (wait for space) if 3 digits received
+        // go to state 13 if 3 digits received
         if (freqsize == 3) {
-          state=12;
+          freqsize = 0;
+          state = 13;
         }; // end if
       } else {
         // too large: error
@@ -385,31 +386,12 @@ char c;
     continue;
           
   }; // end state 11
-         
 
-  // state 12: space between freq part 1 and freq part 2            
-  if (state == 12) {
-    if (c == ' ') {
-      // space received, go to state 13
-      state = 13;
-      Serial.write(c);
-                
-      // reinit freqsize;
-      freqsize=0;                
-    } else {
-      // unknown char
-      Serial.write(bell);
-    }; // end else - if
 
-    // get next char
-    continue;
-
-  }; // end state 12;
-               
-  // state 13: part 2 of freq. (100 Hz part). 4 digits needed
+  // state 13: part 2 of freq. (KHz part). 3 digits needed
   if (state == 13) {
     if ((c >= '0') && (c <= '9')) {
-      if (freqsize < 4) {
+      if (freqsize < 3) {
         freq2 *= 10;
         freq2 += (c - '0');
                
@@ -424,7 +406,7 @@ char c;
       continue;
             
     } else if ((c == 0x0a) || (c == 0x0d)) {
-      if (freqsize == 4) {
+      if (freqsize == 3) {
         // 4 digits received, done
         state = -2;
         Serial.println("");
@@ -537,23 +519,20 @@ if (state == -1) {
 
 if (state == -2) {
   float newfreq;
-  
-  newfreq=((float)freq1)+((float)freq2)/10000.0F; // f1 = MHz, F2 = 100 Hz
-  
+  newfreq = ((float) freq1) + ((float) freq2) / 1000.0F;
 
-  // ISM band: 434.050 to 466.800 and 863 to 870
+  // ISM band: 433.050 to 466.800 and 863 to 870
   if ( ((newfreq >= 433.050F) && (newfreq <= 466.8F)) ||
       ((newfreq >= 863.0) && (newfreq < 870.0F)) ) {
     Serial.print("switching to new frequency: ");
     Serial.println(newfreq);
     
     freq=newfreq;
-
     rf22.setFrequency(freq, 0.05); // set frequency, AfcPullinRange not used (receive-only)
-    
   } else {
-    Serial.print("Error: invalid frequency (should be 433.050-466.800 or 853-8670 Mhz) ");
+    Serial.print("invalid frequency: ");
     Serial.println(newfreq);
+    Serial.println("allowed frequency range is 433.050-466.800 and 863.000-870.000 Mhz");
   }; // end if
 }; // end function F (frequency)
 
